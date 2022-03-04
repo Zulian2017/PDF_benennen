@@ -1,0 +1,164 @@
+#Import all packages
+from sre_constants import JUMP
+from itsdangerous import json
+import send2trash
+import shutil
+import pdf2image
+import os, sys
+import poppler
+try:
+    from PIL import Image
+except ImportError:
+    pass #import Image
+import pytesseract
+
+
+#pytesseract.pytesseract.tesseract_cmd = r'/home/kali/.local/bin/tesseract'
+
+#initialize the path to your documents
+PATH = '/home/kali/Documents/Test PDF/dateien/'
+
+#initialize the counter that you will use later in your pdf extraction function
+i = 1
+
+global find
+find = 0
+
+find2 = 0
+
+# This function deletes all ppm and .DS_Store files from the folder
+def delete_ppms():
+  for file in os.listdir(PATH):
+    if '.ppm' in file or '.DS_Store' in file:
+      try:
+          os.remove(PATH + file)
+      except FileNotFoundError:
+          pass
+
+# initialize lists for each document type
+pdf_files = []
+docx_files = []
+
+for f in os.listdir(PATH):
+  full_name = os.path.join(PATH, f) 
+  if os.path.isfile(full_name):
+    name = os.path.basename(f)
+    filename, ext = os.path.splitext(name)
+    if ext == '.pdf':
+      pdf_files.append(name)
+    elif ext == ('.docx'):
+      docx_files.append(name)
+
+print(pdf_files[0])
+
+def pdf_extract(file, i):
+  print("extracting from file:", file)
+  filee = file
+  delete_ppms()
+  print("1")
+  print(PATH + file)
+  images = pdf2image.convert_from_path(PATH + file, output_folder=PATH)
+  j = 0
+  print("1")
+  for file in sorted (os.listdir(PATH)):
+      if '.ppm' in file and 'image' not in file:
+        os.rename(PATH + file, PATH + 'image' + str(i) + '-' + str(j) + '.ppm')
+        print(j)
+        j += 1
+  j = 0
+  print("3")
+  f = open(PATH +'result{}.txt'.format(i), 'w')
+  #instr = open(PATH +'instrumente.txt')
+  files = [f for f in os.listdir(PATH) if '.ppm' in f]
+
+  for file in sorted(files, key=lambda x: int(x[x.index('-') + 1: x.index('.')])):
+      temp = pytesseract.image_to_string(Image.open(PATH + file))
+      f.write(temp)
+      print(f)
+  f.close()
+  resul = f = open(PATH +'result{}.txt'.format(i))
+  instr = open("/home/kali/Documents/Test PDF/instrumente.txt")
+  spl_instr = []
+  spl_resul = []
+  text_instr = instr.read()
+  text_resul = f.read()
+
+  spl_instr = text_instr.split("\n")
+  spl_resul = text_resul.split("\n")
+
+  find = 0
+  number = ""
+  tune = ""
+  for d in range(len(spl_resul)):
+      for j in range(len(spl_instr)):
+          if "_" in spl_instr[j]:
+              name_instr = spl_instr[j]
+          if spl_instr[j] in spl_resul[d]:
+              print(spl_instr[j])
+              find = 1
+              number = ""
+              tune = ""
+              if "1" in spl_resul[d]:
+                  number = " 1"
+              elif "2" in spl_resul[d]:
+                  number = " 2"
+              elif "3" in spl_resul[d]:
+                  number = " 3"
+              elif "4" in spl_resul[d]:
+                  number = " 4"
+              if "Eb" in spl_resul[d]:
+                  tune = " Eb"
+                  #print("ESSSSSSSS")
+              try:
+                  shutil.move('/home/kali/Documents/Test PDF/dateien/'+file,'/home/kali/Documents/Test PDF/Umbenannt/'+ name_instr+tune+ number +'.pdf')  
+              except:
+                  pass
+              #number = ""
+              a = spl_instr[j]
+          if find == 1:
+            break
+      print(spl_resul[d])
+      if find == 1:
+          print("Find break",find)
+          #find2 = find
+          #return find
+          break
+        
+  #return find
+  #find = 0
+  f.close()
+  if find == 1:
+      try:
+          shutil.move(PATH +'result{}.txt'.format(i),"/home/kali/Documents/Test PDF/txt/" +name_instr+tune+number+'.txt')
+      except:
+          pass
+  else:
+      try:
+          file_extr = []
+          file_extr = filee.split(".pdf")
+          file_extrr = file_extr[0]
+          print("Hallo bin jetzt hier")
+          for g in range(len(file_extr)):
+            print(file_extr[g])
+          shutil.move(PATH +'result{}.txt'.format(i),"/home/kali/Documents/Test PDF/Fehler/" +file_extrr+'.txt')
+          shutil.move('/home/kali/Documents/Test PDF/dateien/'+filee,'/home/kali/Documents/Test PDF/Fehler/'+filee+'.pdf')
+      except:
+          pass
+  return find
+
+
+for i in range(len(pdf_files)):
+  pdf_file = pdf_files[i]
+  print(i)
+  print(pdf_file)
+  find2 = pdf_extract(pdf_file, i)
+  print("Find2",find2)
+  if find2 == 1:
+    send2trash.send2trash('/home/kali/Documents/Test PDF/dateien/'+pdf_file)
+    pass
+  find2 = 0
+print("1")
+
+delete_ppms()
+
+#Test
